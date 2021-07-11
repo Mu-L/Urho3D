@@ -223,74 +223,32 @@ You can pass optional build options to the build system by using environment var
   <img src={'/img/docs/quick-start-screencast.svg'} alt={'Screencast'}/>
 </div>
 
-## UrhoApp Project Structure
+## Dockerized Build Environment
 
-In order to reuse the same build system for Urho3D project to successfully build your own UrhoApp project, the UrhoApp project must be structured similarly to Urho3D project. Assuming you chose to use the `rake new` to create the UrhoApp project, you will have the following project structure under a new app directory:
+Inside the DBE docker container, you can run a single command. By default, the command to run is `rake`. Since the `rakefile` has defined `build` as the default task, effectively making the DBE defaults to perform the build task for the selected target platform. The DBE docker container automatically exits after the single command finished running. The docker container is ephemeral. To make the build artifacts persistent, they must be stored in a bind mount or a docker volume. With bind mount, DBE makes changes to the project root on the host machine after each run, typically in the `build/` directory. While DBE stores the build caches (from ccache and Gradle) and installed libraries (including Urho3D library), in the docker volume.
 
-```
-UrhoApp
-├─ app
-│  ├─ build.gradle.kts
-│  ├─ CMakeLists.txt
-│  ├─ proguard-rules.pro
-│  └─ src
-│     ├─ cpp
-│     │  ├─ UrhoApp.cpp
-│     │  └─ UrhoApp.h
-│     ├─ java
-│     │  └─ io/urho3d/urhoapp
-│     │     └─ MainActivity.kt
-│     ├─ res
-│     |  └─ (truncated)
-│     └─ AndroidManifest.xml
-├─ bin
-│  ├─ CoreData
-│  │  └─ (as in Urho3D)
-│  └─ Data
-│     ├─ Materials
-│     │  └─ Mushroom.xml
-│     ├─ Models
-│     │  └─ Mushroom.mdl
-│     ├─ Music
-│     │  └─ Ninja Gods.ogg
-│     └─ Textures
-│        ├─ Mushroom.dds
-│        ├─ UrhoIcon.icns
-│        └─ UrhoIcon.png
-├─ build.gradle.kts
-├─ cmake
-│  └─ (as in Urho3D)
-├─ CMakeLists.txt
-├─ gradle/wrapper
-│  ├─ gradle-wrapper.jar
-│  └─ gradle-wrapper.properties
-├─ gradle.properties
-├─ gradlew
-├─ gradlew.bat
-├─ rakefile
-├─ scripts
-│  └─ (as in Urho3D)
-├─ settings.gradle.kts
-├─ .clang-format
-├─ .clang-tidy
-├─ .gitattributes
-└─ .gitignore
+Following are a few other examples how the DBE docker container can be run. First, set up `dbe` alias for spawning a DBE docker container for, say, Web platform. You can replace it with other target platform.
+
+```bash
+alias dbe='script/dockerized.sh web'
 ```
 
-At the root of the project there are a few build scripts which can be grouped as follows:
-- **CMake** - consist of `CMakeLists.txt` and all the CMake modules and toolchains in the `cmake/` directory.
-- **Gradle** - consist of `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, and the Gradle wrapper scripts.
-- **Shell** - consist of convenience *nix bash shell script and Windows batch files in the `script/` directory.
-- **Rake** - one `rakefile` that defines all the common tasks with opinionated default options.
+### `dbe env`
 
-If you are very familiar with CMake then you can directly invoke `cmake`, `ccmake`, or `cmake-gui` to generate a build tree for all the supported platforms, except for Android platform. For the latter case you need to use `gradle`, or via its wrapper script if you don't have Gradle installed globally. For the most cases though, you will probably find it useful to use the convenience shell scripts or to use them as reference for your own convenience scripts. Finally, the `rake` command can be used to execute rake tasks for building the project and more.
+Output the preconfigured environment variables for the target platform and exit.
 
-All the above are for the build system, the actual meat of the UrhoApp project are only residing in the following two directories:
-- `app/` - mainly contains the C++ source code in `src/cpp/` and Kotlin/Java source code in `src/java/`.
-- `bin/` - contains the assets used by the Urho3D game engine, at the very least it should have `CoreData/` and `Data/`.
+### `dbe ccache -s`
 
-:::info
+Output the cache statistics from ccache and exit.
 
-The UrhoApp project is cross-platform out of the box!
+### `dbe rake info['install_dir']`
 
-:::
+Output the Urho3D default install location for the target platform and exit.
+
+### `dbe ls $(dbe rake info['install_dir'])`
+
+List the current content of the Urho3D default install location for the target platform and exit.
+
+### `dbe bash`
+
+Run an interactive `bash` shell where you can poke around inside the running docker container, execute any commands, including installing more software packages with `sudo` command for quick testing. Changes that are not in bind mount and docker volume will be lost after you type `exit`.
